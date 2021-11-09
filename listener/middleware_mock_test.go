@@ -58,5 +58,5 @@ func (cmm *connMiddlewareMock) StopAsync() <-chan struct{} {
 
 func (cmm *connMiddlewareMock) StopSync() {
 	<-cmm.StopAsync()
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second)
 }

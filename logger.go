@@ -2,16 +2,16 @@ package websocket
 
 import "fmt"
 
-type logger struct {
-	srv string
+type LoggerMock struct {
+	Srv string
 }
 
-func (l *logger) Error(args ...interface{}) {
-	fmt.Print(`[` + l.srv + `]`)
+func (l *LoggerMock) Error(args ...interface{}) {
+	fmt.Print(`[` + l.Srv + `] `)
 	fmt.Println(args...)
 }
 
-func (l *logger) Info(args ...interface{}) {
-	fmt.Print(`[` + l.srv + `]`)
+func (l *LoggerMock) Info(args ...interface{}) {
+	fmt.Print(`[` + l.Srv + `] `)
 	fmt.Println(args...)
 }

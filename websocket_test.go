@@ -16,13 +16,13 @@ func TestWebsocket(t *testing.T) {
 		false,
 		8080,
 		&TwoStageSemaphore{},
-		&logger{`listener`},
+		&LoggerMock{`listener`},
 		time.Second,
 		&TwoStageSemaphore{},
-		&logger{`debouncer`},
+		&LoggerMock{`debouncer`},
 		128,
 		&TwoStageSemaphore{},
-		&logger{`limiter`},
+		&LoggerMock{`limiter`},
 	)
 
 	err := lis.Start()
