@@ -1,4 +1,4 @@
-package websocket
+package sem
 
 import (
 	"testing"
@@ -8,6 +8,6 @@ import (
 
 func TestImplementation(t *testing.T) {
 	var sem listener.StopSemaphoreI
-	sem = &TwoStageSemaphore{}
+	sem = &TwoStage{}
 	sem.FinishStopping()
 }

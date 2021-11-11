@@ -6,16 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lone-cat/websocket"
+	"github.com/lone-cat/websocket/mock"
+	"github.com/lone-cat/websocket/sem"
 )
 
 func TestLimiter(t *testing.T) {
-	var connCount uint8 = 10
-	lim := NewLimiter(connCount, &websocket.TwoStageSemaphore{}, &websocket.LoggerMock{Srv: `test`})
+	const interval = time.Millisecond * 10
+	const connCount = 5
+
+	lim := NewLimiter(connCount, &sem.TwoStage{}, &mock.Logger{Srv: `test`})
 	chFrom := make(chan net.Conn)
 	chTo := make(chan net.Conn)
 
-	var c uint8
+	var c int
 	var lastConn net.Conn
 
 	go func() {
@@ -27,20 +30,20 @@ func TestLimiter(t *testing.T) {
 	}()
 
 	go func() {
-		var i uint8
-		for i = 0; i < connCount+2; i++ {
-			chFrom <- &netConnMock{netAddrMock{fmt.Sprint(i)}}
-			time.Sleep(time.Second / 20)
+		for i := 0; i < connCount+2; i++ {
+			chFrom <- &mock.NetConn{Addr: &mock.NetAddr{Addr: fmt.Sprint(i)}}
+			time.Sleep(interval)
 		}
 	}()
 
 	err := lim.StartAsync(chFrom, chTo)
+	defer lim.StopSync()
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	time.Sleep(time.Second * 1)
+	time.Sleep(interval * (connCount + 1))
 
 	c2 := c
 
@@ -50,9 +53,9 @@ func TestLimiter(t *testing.T) {
 
 	lastConn.Close()
 
-	chFrom <- &netConnMock{netAddrMock{fmt.Sprint(22)}}
+	chFrom <- &mock.NetConn{Addr: &mock.NetAddr{Addr: fmt.Sprint(22)}}
 
-	time.Sleep(time.Second * 1)
+	time.Sleep(interval)
 
 	if c != c2+1 {
 		t.Errorf(`dropped connection does not free place %d`, c)

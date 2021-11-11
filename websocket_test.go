@@ -9,20 +9,22 @@ import (
 	"time"
 
 	"github.com/lone-cat/websocket/listener"
+	"github.com/lone-cat/websocket/mock"
+	"github.com/lone-cat/websocket/sem"
 )
 
-func TestWebsocket(t *testing.T) {
+func aTestWebsocket(t *testing.T) {
 	lis := listener.Factory{}.CreateConnectionProvider(
 		false,
 		8080,
-		&TwoStageSemaphore{},
-		&LoggerMock{`listener`},
+		&sem.TwoStage{},
+		&mock.Logger{Srv: `listener`},
 		time.Second,
-		&TwoStageSemaphore{},
-		&LoggerMock{`debouncer`},
+		&sem.TwoStage{},
+		&mock.Logger{Srv: `debouncer`},
 		128,
-		&TwoStageSemaphore{},
-		&LoggerMock{`limiter`},
+		&sem.TwoStage{},
+		&mock.Logger{Srv: `limiter`},
 	)
 
 	err := lis.Start()

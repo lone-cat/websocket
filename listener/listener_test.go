@@ -1,37 +1,68 @@
 package listener
 
 import (
+	"net"
+	"strconv"
 	"testing"
+	"time"
+
+	"github.com/lone-cat/websocket/mock"
+	"github.com/lone-cat/websocket/sem"
 )
 
-type loggerMock struct{}
+func TestListener(t *testing.T) {
+	const port = 8085
+	l := NewListener(true, port, &sem.TwoStage{}, &mock.Logger{Srv: `test`})
 
-func (lm *loggerMock) Info(...interface{}) {
+	connChan := make(chan net.Conn)
+	err := l.StartAsync(connChan)
+	defer l.StopSync()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-}
+	var c uint8
 
-func (lm *loggerMock) Error(...interface{}) {
+	var conn net.Conn
 
-}
+	go func() {
+		for conn := range connChan {
+			c++
+			t.Logf(`conn number %d (%s) accepted`, c, conn.RemoteAddr().String())
+		}
+	}()
 
-type semMock struct{}
+	time.Sleep(time.Millisecond * 10)
+	conn, err = net.Dial(`tcp`, `:`+strconv.Itoa(port))
+	time.Sleep(time.Millisecond * 10)
 
-func (lm *semMock) IsStopping() bool                  { return true }
-func (lm *semMock) IsStopped() bool                   { return true }
-func (lm *semMock) Start() bool                       { return true }
-func (lm *semMock) StartStopping()                    {}
-func (lm *semMock) FinishStopping()                   {}
-func (lm *semMock) WaitTillStopped()                  {}
-func (lm *semMock) GetStoppingChannel() chan struct{} { return nil }
-func (lm *semMock) GetStoppedChannel() chan struct{}  { return nil }
+	if err != nil {
+		t.Fatal(err)
+	}
 
-func TestNewListener(t *testing.T) {
-	var l interface{}
-	l = NewListener(true, 123, &semMock{}, &loggerMock{})
-	switch l.(type) {
-	case *Listener:
+	if c < 1 {
+		t.Error(`connection 1 was not accepted`)
+	}
 
-	default:
-		t.Error(`NewListener fails creation!`)
+	err = conn.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	time.Sleep(time.Millisecond * 10)
+	conn, err = net.Dial(`tcp`, `:`+strconv.Itoa(port))
+	time.Sleep(time.Millisecond * 10)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if c < 2 {
+		t.Error(`connection 2 was not accepted`)
+	}
+
+	err = conn.Close()
+	if err != nil {
+		t.Fatal(err)
 	}
 }

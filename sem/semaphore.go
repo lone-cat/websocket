@@ -1,4 +1,4 @@
-package websocket
+package sem
 
 import "sync"
 
@@ -11,13 +11,13 @@ func isSignalChannelClosed(ch chan struct{}) bool {
 	}
 }
 
-type TwoStageSemaphore struct {
+type TwoStage struct {
 	mu           sync.RWMutex
 	stoppingChan chan struct{}
 	stoppedChan  chan struct{}
 }
 
-func (tss *TwoStageSemaphore) init() {
+func (tss *TwoStage) init() {
 	var needInit bool
 
 	tss.mu.RLock()
@@ -36,19 +36,19 @@ func (tss *TwoStageSemaphore) init() {
 	}
 }
 
-func (tss *TwoStageSemaphore) IsStopping() bool {
+func (tss *TwoStage) IsStopping() bool {
 	tss.init()
 
 	return isSignalChannelClosed(tss.stoppingChan)
 }
 
-func (tss *TwoStageSemaphore) IsStopped() bool {
+func (tss *TwoStage) IsStopped() bool {
 	tss.init()
 
 	return isSignalChannelClosed(tss.stoppedChan)
 }
 
-func (tss *TwoStageSemaphore) Start() bool {
+func (tss *TwoStage) Start() bool {
 	tss.init()
 
 	if !tss.IsStopped() {
@@ -64,7 +64,7 @@ func (tss *TwoStageSemaphore) Start() bool {
 	return true
 }
 
-func (tss *TwoStageSemaphore) StartStopping() {
+func (tss *TwoStage) StartStopping() {
 	tss.init()
 
 	if !tss.IsStopping() {
@@ -74,7 +74,7 @@ func (tss *TwoStageSemaphore) StartStopping() {
 	}
 }
 
-func (tss *TwoStageSemaphore) FinishStopping() {
+func (tss *TwoStage) FinishStopping() {
 	tss.init()
 
 	tss.StartStopping()
@@ -86,13 +86,13 @@ func (tss *TwoStageSemaphore) FinishStopping() {
 	}
 }
 
-func (tss *TwoStageSemaphore) WaitTillStopped() {
+func (tss *TwoStage) WaitTillStopped() {
 	tss.init()
 
 	<-tss.GetStoppedChannel()
 }
 
-func (tss *TwoStageSemaphore) GetStoppingChannel() chan struct{} {
+func (tss *TwoStage) GetStoppingChannel() chan struct{} {
 	tss.init()
 	tss.mu.RLock()
 	defer tss.mu.RUnlock()
@@ -100,7 +100,7 @@ func (tss *TwoStageSemaphore) GetStoppingChannel() chan struct{} {
 	return stoppingChan
 }
 
-func (tss *TwoStageSemaphore) GetStoppedChannel() chan struct{} {
+func (tss *TwoStage) GetStoppedChannel() chan struct{} {
 	tss.init()
 	tss.mu.RLock()
 	defer tss.mu.RUnlock()

@@ -2,55 +2,53 @@ package listener
 
 import (
 	"net"
+	"runtime"
 )
 
 type ConnectionProvider struct {
-	listener             ConnectionProviderI
-	debouncer            ConnectionMiddlewareI
-	limiter              ConnectionMiddlewareI
-	listenerResultsChan  chan net.Conn
-	debouncerResultsChan chan net.Conn
-	resultChan           chan net.Conn
+	listener    ConnectionProviderI
+	middlewares []ConnectionMiddlewareI
+	channels    []chan net.Conn
 }
 
-func NewConnectionProvider(listener ConnectionProviderI, debouncer ConnectionMiddlewareI, limiter ConnectionMiddlewareI) *ConnectionProvider {
+func NewConnectionProvider(listener ConnectionProviderI, middlewares ...ConnectionMiddlewareI) *ConnectionProvider {
+	channels := make([]chan net.Conn, len(middlewares)+1)
+
+	for i := range channels {
+		channels[i] = make(chan net.Conn)
+	}
+
 	return &ConnectionProvider{
-		listener:             listener,
-		debouncer:            debouncer,
-		limiter:              limiter,
-		listenerResultsChan:  make(chan net.Conn),
-		debouncerResultsChan: make(chan net.Conn),
-		resultChan:           make(chan net.Conn),
+		listener:    listener,
+		middlewares: middlewares,
+		channels:    channels,
 	}
 }
 
 func (cp *ConnectionProvider) GetResultChan() (resultChan <-chan net.Conn) {
-	return cp.resultChan
+	return cp.channels[len(cp.channels)-1]
 }
 
 func (cp *ConnectionProvider) Start() (err error) {
-	err = cp.limiter.StartAsync(cp.debouncerResultsChan, cp.resultChan)
-	if err != nil {
-		return
+	for i := len(cp.middlewares) - 1; i >= 0; i-- {
+		err = cp.middlewares[i].StartAsync(cp.channels[i], cp.channels[i+1])
+		if err != nil {
+			return
+		}
+		runtime.Gosched()
 	}
 
-	err = cp.debouncer.StartAsync(cp.listenerResultsChan, cp.debouncerResultsChan)
+	err = cp.listener.StartAsync(cp.channels[0])
 	if err != nil {
-		cp.limiter.StopSync()
-		return
 	}
-
-	err = cp.listener.StartAsync(cp.listenerResultsChan)
-	if err != nil {
-		cp.debouncer.StopSync()
-		cp.limiter.StopSync()
-	}
+	runtime.Gosched()
 
 	return
 }
 
 func (cp *ConnectionProvider) Stop() {
 	cp.listener.StopSync()
-	cp.debouncer.StopSync()
-	cp.limiter.StopSync()
+	for _, middleware := range cp.middlewares {
+		middleware.StopSync()
+	}
 }
