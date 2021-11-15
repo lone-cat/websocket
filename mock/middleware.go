@@ -27,31 +27,33 @@ func (cmm *ConnMiddleware) StartAsync(chanFrom <-chan net.Conn, chanTo chan<- ne
 		return errors.New(`can't start`)
 	}
 
-	go func() {
-		var conn net.Conn
-
-		defer func() {
-			//fmt.Println(`stopped middleware`)
-		}()
-
-	loop:
-		for {
-			select {
-			case <-cmm.stop:
-				break loop
-			case conn = <-chanFrom:
-				select {
-				case chanTo <- conn:
-
-				case <-cmm.stop:
-					break loop
-				}
-			}
-
-		}
-	}()
+	go cmm.start(chanFrom, chanTo)
 
 	return nil
+}
+
+func (cmm *ConnMiddleware) start(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) {
+	var conn net.Conn
+
+	defer func() {
+		//fmt.Println(`stopped middleware`)
+	}()
+
+loop:
+	for {
+		select {
+		case <-cmm.stop:
+			break loop
+		case conn = <-chanFrom:
+			select {
+			case chanTo <- conn:
+
+			case <-cmm.stop:
+				break loop
+			}
+		}
+
+	}
 }
 
 func (cmm *ConnMiddleware) StopAsync() <-chan struct{} {

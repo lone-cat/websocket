@@ -11,4 +11,6 @@ type ConnectionMiddlewareI interface {
 	StartAsync(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) error
 	StopAsync() <-chan struct{}
 	StopSync()
+
+	//start(chanFrom <-chan net.Conn, chanTo chan<- net.Conn)
 }

@@ -31,14 +31,14 @@ func (d *Debouncer) StartAsync(chanFrom <-chan net.Conn, chanTo chan<- net.Conn)
 
 	d.stopSemaphore.Start()
 
-	go d.debounce(chanFrom, chanTo)
+	go d.start(chanFrom, chanTo)
 
 	d.logger.Info(`debouncer started`)
 
 	return nil
 }
 
-func (d *Debouncer) debounce(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) {
+func (d *Debouncer) start(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) {
 	timer := time.NewTimer(time.Nanosecond)
 
 	defer func() {
@@ -100,6 +100,5 @@ func (d *Debouncer) StopAsync() <-chan struct{} {
 }
 
 func (d *Debouncer) StopSync() {
-	ch := d.StopAsync()
-	<-ch
+	<-d.StopAsync()
 }

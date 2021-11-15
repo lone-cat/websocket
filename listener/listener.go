@@ -84,9 +84,13 @@ func (l *Listener) startListening(resultChan chan<- net.Conn) {
 	}
 }
 
-func (l *Listener) StopSync() {
+func (l *Listener) StopAsync() <-chan struct{} {
 	l.logger.Info(`stopping listener...`)
 	l.stopSemaphore.StartStopping()
 	_ = l.listener.Close()
-	l.stopSemaphore.WaitTillStopped()
+	return l.stopSemaphore.GetStoppedChannel()
+}
+
+func (l *Listener) StopSync() {
+	<-l.StopAsync()
 }

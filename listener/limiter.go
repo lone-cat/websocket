@@ -28,14 +28,14 @@ func (l *Limiter) StartAsync(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) e
 
 	l.stopSemaphore.Start()
 
-	go l.limit(chanFrom, chanTo)
+	go l.start(chanFrom, chanTo)
 
 	l.logger.Info(`limiter started`)
 
 	return nil
 }
 
-func (l *Limiter) limit(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) {
+func (l *Limiter) start(chanFrom <-chan net.Conn, chanTo chan<- net.Conn) {
 
 	defer func() {
 		l.stopSemaphore.FinishStopping()
@@ -94,6 +94,5 @@ func (l *Limiter) StopAsync() <-chan struct{} {
 }
 
 func (l *Limiter) StopSync() {
-	ch := l.StopAsync()
-	<-ch
+	<-l.StopAsync()
 }
